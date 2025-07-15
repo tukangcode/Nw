@@ -8,7 +8,7 @@
 Sebuah sistem pelaporan kejadian berbasis peta yang dinamis, interaktif, dan berskala nasional untuk memantau berbagai peristiwa di seluruh Indonesia.
 
 ![Nusantara Watch Screenshot](nwlogo.png) 
-*(Catatan: Ganti `path/to/screenshot.png` dengan screenshot aplikasi Anda jika sudah ada)*
+
 
 ---
 

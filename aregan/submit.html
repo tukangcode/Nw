@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporkan Kejadian - AREGAN</title>
+    
+    <!-- CSS LIBRARIES - Lengkap untuk semua fitur -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" rel="stylesheet">
+    
+    <style>
+        body { background-color: #f1f5f9; }
+        #map {
+            height: 450px;
+            border-radius: 0.5rem;
+            cursor: crosshair;
+            border: 1px solid #d1d5db;
+        }
+        .form-container {
+            max-width: 1200px;
+            width: 95%;
+            margin: 1.5rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+        }
+        /* Custom styles untuk ikon FontAwesome di Leaflet */
+        .leaflet-div-icon {
+            background: transparent;
+            border: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-white shadow-md w-full">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 class="text-2xl lg:text-3xl font-bold text-blue-600">AREGAN</h1>
+            <a href="index.html" class="text-sm font-medium text-gray-600 hover:text-blue-600">
+                ← Kembali ke Peta Utama
+            </a>
+        </div>
+    </header>
+
+    <main class="form-container flex-grow">
+        <div class="mb-6 pb-4 border-b">
+            <h1 class="text-3xl font-bold text-gray-800">Form Laporan Kejadian</h1>
+            <p class="mt-2 text-gray-600">Gunakan fitur peta untuk menandai lokasi seakurat mungkin. Laporan Anda akan ditinjau sebelum dipublikasikan.</p>
+        </div>
+        
+        <div id="form-message" class="hidden p-4 mb-6 text-sm rounded-lg" role="alert"></div>
+
+        <form id="submissionForm">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
+                <!-- Left Column: Event Details -->
+                <div class="space-y-6">
+                    <div>
+                        <label for="eventName" class="block text-sm font-medium text-gray-700">Nama Kejadian <span class="text-red-500">*</span></label>
+                        <input type="text" id="eventName" name="event_name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="eventDetails" class="block text-sm font-medium text-gray-700">Detail Kejadian <span class="text-red-500">*</span></label>
+                        <textarea id="eventDetails" name="event_details" rows="5" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label for="eventDate" class="block text-sm font-medium text-gray-700">Tanggal <span class="text-red-500">*</span></label>
+                            <input type="date" id="eventDate" name="event_date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label for="eventCategory" class="block text-sm font-medium text-gray-700">Kategori</label>
+                            <select id="eventCategory" name="category" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                                <option>Kriminal</option><option>Bencana</option><option>Konflik</option><option>Lingkungan</option><option>Lalu Lintas</option><option>Acara Publik</option><option>Lainnya</option>
+                            </select>
+                        </div>
+                    </div>
+                     <div class="pt-6 border-t border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Informasi Anda (Opsional)</h3>
+                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <label for="submitterName" class="block text-sm font-medium text-gray-700">Nama Anda</label>
+                                <input type="text" id="submitterName" name="submitter_name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="submitterEmail" class="block text-sm font-medium text-gray-700">Email Anda</label>
+                                <input type="email" id="submitterEmail" name="submitter_email" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                         </div>
+                     </div>
+                </div>
+
+                <!-- Right Column: Map and Location Details -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi di Peta <span class="text-red-500">*</span> <span class="text-gray-500 font-normal">(Gunakan pencarian, kompas, atau klik peta)</span></label>
+                        <div id="map"></div>
+                        <input type="hidden" id="eventLocationCoordinates" name="coordinates" required>
+                    </div>
+                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                           <label for="iconSelect" class="block text-sm font-medium text-gray-700">Ikon Peta</label>
+                           <select id="iconSelect" name="icon_class" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                               <option value="fa-car-burst" data-color="#ef4444">Kecelakaan</option>
+                               <option value="fa-fire-flame-curved" data-color="#f97316">Kebakaran</option>
+                               <option value="fa-house-flood-water" data-color="#0ea5e9">Banjir</option>
+                               <option value="fa-handcuffs" data-color="#3b82f6">Polisi / Kriminal</option>
+                               <option value="fa-person-rifle" data-color="#78716c">Konflik Bersenjata</option>
+                               <option value="fa-users" data-color="#84cc16">Keramaian / Acara</option>
+                               <option value="fa-map-marker-alt" data-color="#64748b" selected>Default</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label for="eventRadius" class="block text-sm font-medium text-gray-700">Radius Dampak (meter)</label>
+                           <input type="number" id="eventRadius" name="radius" placeholder="e.g., 500" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-10 pt-6 border-t border-gray-200">
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-lg font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400">
+                    <i class="fas fa-paper-plane"></i> Kirim Laporan untuk Ditinjau
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- JAVASCRIPT LIBRARIES -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- OUR CUSTOM SCRIPT -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Element References ---
+        const coordsInput = document.getElementById('eventLocationCoordinates');
+        const iconSelect = document.getElementById('iconSelect');
+        const radiusInput = document.getElementById('eventRadius');
+        const form = document.getElementById('submissionForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const formMessage = document.getElementById('form-message');
+
+        let marker;
+        let radiusCircle;
+
+        // --- Map Layers & Controls Setup ---
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        });
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        });
+
+        const map = L.map('map', {
+            layers: [streetLayer] // Default layer
+        }).setView([-2.5489, 118.0149], 5);
+
+        const baseMaps = {
+            "Jalan": streetLayer,
+            "Satelit": satelliteLayer
+        };
+        L.control.layers(baseMaps).addTo(map);
+
+        // Geocoder (Search Bar) Control
+        L.Control.geocoder({ 
+            defaultMarkGeocode: false, 
+            placeholder: 'Cari alamat atau lokasi...' 
+        }).on('markgeocode', e => handleMapInteraction(e.geocode.center)).addTo(map);
+
+        // Locate (My Location) Control
+        const locateControl = L.control.locate({
+            position: 'topleft',
+            strings: { title: "Lacak lokasi saya" },
+            flyTo: true,
+            returnToPrevBounds: true
+        }).addTo(map);
+        map.on('locationfound', e => handleMapInteraction(e.latlng));
+
+
+        // --- Core Map Interaction Logic ---
+        function handleMapInteraction(latlng) {
+            coordsInput.value = `${latlng.lat.toFixed(6)},${latlng.lng.toFixed(6)}`;
+            
+            if (!marker) {
+                marker = L.marker(latlng, { draggable: true }).addTo(map);
+                marker.on('dragend', function(e) {
+                    const newLatLng = e.target.getLatLng();
+                    coordsInput.value = `${newLatLng.lat.toFixed(6)},${newLatLng.lng.toFixed(6)}`;
+                    updateRadiusCircle(newLatLng); // Update circle on drag
+                });
+            } else {
+                marker.setLatLng(latlng);
+            }
+            map.setView(latlng, 15);
+            
+            // Update visuals immediately
+            updateMarkerIcon();
+            updateRadiusCircle(latlng);
+        }
+        map.on('click', e => handleMapInteraction(e.latlng));
+
+        // --- Live Preview Functions ---
+        function createIcon(iconClass, color) {
+            return L.divIcon({ 
+                html: `<i class="fas ${iconClass}" style="color: ${color}; font-size: 28px; text-shadow: 0 0 4px rgba(0,0,0,0.6);"></i>`, 
+                className: 'leaflet-div-icon', 
+                iconSize: [28, 28], 
+                iconAnchor: [14, 28] 
+            });
+        }
+        
+        function updateMarkerIcon() {
+            if (!marker) return;
+            const selectedOption = iconSelect.options[iconSelect.selectedIndex];
+            const iconClass = selectedOption.value;
+            const color = selectedOption.dataset.color || '#64748b';
+            marker.setIcon(createIcon(iconClass, color));
+        }
+
+        function updateRadiusCircle(latlng) {
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+            }
+            if (!marker) return;
+
+            const radius = parseInt(radiusInput.value, 10);
+            if (radius > 0) {
+                radiusCircle = L.circle(latlng, {
+                    radius: radius,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.15
+                }).addTo(map);
+            }
+        }
+
+        // --- Event Listeners for Live Preview ---
+        iconSelect.addEventListener('change', updateMarkerIcon);
+        radiusInput.addEventListener('input', () => {
+            if (marker) {
+                updateRadiusCircle(marker.getLatLng());
+            }
+        });
+
+        // --- Form Submission Logic ---
+        document.getElementById('eventDate').value = new Date().toISOString().split('T')[0];
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!coordsInput.value) {
+                alert('PENTING: Silakan pilih lokasi di peta terlebih dahulu dengan mengklik peta.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+
+            const formData = new FormData(form);
+            const [lat, lng] = coordsInput.value.split(',');
+            formData.append('latitude', lat.trim());
+            formData.append('longitude', lng.trim());
+            formData.delete('coordinates');
+            
+            try {
+                const response = await fetch('api/submit.php', { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (response.ok) {
+                    formMessage.className = 'p-4 mb-6 text-sm text-green-800 rounded-lg bg-green-50';
+                    formMessage.innerHTML = `<strong class="font-bold">Berhasil!</strong> ${result.message}`;
+                    form.reset();
+                    document.getElementById('eventDate').value = new Date().toISOString().split('T')[0];
+                    if (marker) map.removeLayer(marker);
+                    if (radiusCircle) map.removeLayer(radiusCircle);
+                    marker = null;
+                    radiusCircle = null;
+                } else {
+                    throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui.');
+                }
+            } catch (error) {
+                formMessage.className = 'p-4 mb-6 text-sm text-red-800 rounded-lg bg-red-50';
+                formMessage.innerHTML = `<strong class="font-bold">Gagal!</strong> ${error.message}`;
+            } finally {
+                formMessage.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Laporan untuk Ditinjau';
+            }
+        });
+    });
+    </script>
+</body>
+</html>
